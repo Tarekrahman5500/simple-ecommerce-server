@@ -13,5 +13,15 @@ const categorySchema = new Schema({
     },
 })
 
+// create virtual field
+
+categorySchema.virtual('id').get(function () {
+    return this._id.toHexString()
+})
+
+categorySchema.set('toJSON', {
+    virtuals: true,
+})
+
 // in mongo db save as pts name
 module.exports = model('Category', categorySchema)

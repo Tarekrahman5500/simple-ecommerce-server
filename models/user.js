@@ -9,5 +9,14 @@ const userSchema = new Schema({
     },
 })
 
+// create virtual field
+
+userSchema.virtual('id').get(function () {
+    return this._id.toHexString()
+})
+userSchema.set('toJSON', {
+    virtuals: true,
+})
+
 // in mongo db save as pts name
 module.exports = model('User', userSchema)

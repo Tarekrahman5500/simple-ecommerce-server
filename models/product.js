@@ -45,18 +45,27 @@ const productSchema = new Schema({
         type: Number,
         default: 0,
     },
-    numReviews:{
+    numReviews: {
         type: Number,
         default: 0,
     },
     isFeatured: {
-        type:Boolean,
+        type: Boolean,
         default: false,
     },
     dateCreated: {
-      type: Date,
-      default: Date.now,
+        type: Date,
+        default: Date.now,
     },
+})
+// create virtual field
+
+productSchema.virtual('id').get(function () {
+    return this._id.toHexString()
+})
+
+productSchema.set('toJSON', {
+    virtuals: true,
 })
 
 // in mongo db save as pts name
