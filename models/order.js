@@ -1,8 +1,10 @@
-import {model, Schema} from "mongoose";
+
+const {Schema, model} = require("mongoose");
 
 const orderSchema = new Schema({
 
 })
 
-// in mongo db save as pts name
-module.exports = model('Order', orderSchema)
+
+
+exports.Order = model('Order', orderSchema);

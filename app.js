@@ -1,13 +1,14 @@
-import express from 'express'
-import cors from 'cors'
-import {ServerApiVersion} from 'mongodb'
-import 'dotenv/config'
-import logger from 'morgan'
-import mongoose from 'mongoose'
-import authJwt from './helpers/jwt'
-import errorHandler from './helpers/errorHandler'
 
-const app = express()
+const express = require('express');
+const app = express();
+const logger = require('morgan');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv/config');
+const authJwt = require('./helpers/jwt');
+const errorHandler = require('./helpers/errorhandler');
+const {ServerApiVersion} = require ("mongodb");
+
 const port = process.env.PORT || 5000
 const api = process.env.API_URL || ''
 //handle cors policy
@@ -23,10 +24,12 @@ app.use(authJwt())
 app.use(errorHandler)
 
 app.use(express.urlencoded({extended: false}));
-import productRouter from './routes/products'
-import categoriesRouter from './routes/categories'
-import usersRouter from './routes/users'
-import orderRouter from './routes/orders'
+//Routes
+
+const  productRouter = require('./routes/products');
+const categoriesRouter = require('./routes/categories');
+const usersRouter = require('./routes/users');
+const  orderRouter = require('./routes/orders');
 //handle mongodb
 (async () => {
     try {

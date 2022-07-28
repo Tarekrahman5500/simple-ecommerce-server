@@ -1,16 +1,14 @@
-import express from 'express';
-import Order from '../models/order'
+const {Order} = require('../models/order');
+const express = require('express');
 const router = express.Router();
 
-// make a simple get request
-router.get(`/`, async (req, res) => {
-    // return all data from db
-    const orders = await Order.find()
-    // if the list is empty
-    if (!orders) {
+router.get(`/`, async (req, res) =>{
+    const orderList = await Order.find();
+
+    if(!orderList) {
         res.status(500).json({success: false})
-    } else
-        res.send(orders)
+    } 
+    res.send(orderList);
 })
 
-module.exports = router;
+module.exports =router;

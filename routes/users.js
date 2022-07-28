@@ -1,11 +1,8 @@
-import express from 'express';
-import User from '../models/user'
-import bcrypt from 'bcryptjs'
-import mongoose from "mongoose";
-import jwt from "jsonwebtoken"
-
-
+const {User} = require('../models/user');
+const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // make a simple get request
 router.get(`/`, async (req, res) => {
@@ -16,10 +13,10 @@ router.get(`/`, async (req, res) => {
         if (!users) {
             res.status(500).json({success: false})
         } else
-          return  res.send(users)
+            return  res.send(users)
 
     } catch (err) {
-       return  res.status(500).json({error: err, message: 'user not found'})
+        return  res.status(500).json({error: err, message: 'user not found'})
     }
 })
 

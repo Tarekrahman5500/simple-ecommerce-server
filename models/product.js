@@ -1,4 +1,5 @@
-import {model, Schema} from "mongoose";
+const mongoose = require('mongoose');
+const {Schema, model} = require("mongoose");
 
 const productSchema = new Schema({
     name: {
@@ -11,35 +12,33 @@ const productSchema = new Schema({
     },
     richDescription: {
         type: String,
-        default: "",
+        default: ''
     },
     image: {
         type: String,
-        default: "",
+        default: ''
     },
     images: [{
-        type: String,
-        default: "",
+        type: String
     }],
-    brands: {
+    brand: {
         type: String,
-        default: "",
+        default: ''
     },
-    price: {
+    price : {
         type: Number,
-        default: 0,
+        default:0
     },
     category: {
-        // IT WILL REFER the category id not full details
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
-        required: true,
+        required:true
     },
     countInStock: {
         type: Number,
         required: true,
         min: 0,
-        max: 255,
+        max: 255
     },
     rating: {
         type: Number,
@@ -58,16 +57,14 @@ const productSchema = new Schema({
         default: Date.now,
     },
 })
-// create virtual field
 
 productSchema.virtual('id').get(function () {
-    return this._id.toHexString()
-})
+    return this._id.toHexString();
+});
 
 productSchema.set('toJSON', {
     virtuals: true,
-})
+});
 
-// in mongo db save as pts name
-module.exports = model('Product', productSchema)
 
+exports.Product = model('Product', productSchema);

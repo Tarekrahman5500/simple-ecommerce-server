@@ -1,4 +1,4 @@
-import {model, Schema} from "mongoose";
+const {Schema, model} = require("mongoose");
 
 const userSchema = new Schema({
     name: {
@@ -9,48 +9,48 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
-   passwordHash:{
-       type: String,
-       required: true,
-   } ,
+    passwordHash: {
+        type: String,
+        required: true,
+    },
     phone: {
         type: String,
         required: true,
     },
     isAdmin: {
         type: Boolean,
-        required: false,
+        default: false,
     },
     street: {
         type: String,
-        required: '',
+        default: ''
     },
     apartment: {
         type: String,
-        required: '',
+        default: ''
     },
-    zip: {
+    zip :{
         type: String,
-        required: '',
+        default: ''
     },
     city: {
         type: String,
-        required: '',
+        default: ''
     },
     country: {
         type: String,
-        required: '',
-    },
-})
+        default: ''
+    }
 
-// create virtual field id for frontend friendly
+});
 
 userSchema.virtual('id').get(function () {
-    return this._id.toHexString()
-})
+    return this._id.toHexString();
+});
+
 userSchema.set('toJSON', {
     virtuals: true,
-})
+});
 
-// in mongo db save as users name
-module.exports = model('User', userSchema)
+exports.User = model('User', userSchema);
+exports.userSchema = userSchema;

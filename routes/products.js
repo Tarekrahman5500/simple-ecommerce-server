@@ -1,9 +1,9 @@
-import express from 'express';
-import Product from "../models/product";
-import Category from "../models/category"
-import mongoose from 'mongoose'
-
+const {Product} = require('../models/product');
+const express = require('express');
+const { Category } = require('../models/category');
 const router = express.Router();
+const mongoose = require('mongoose');
+
 
 // make a simple get request
 router.get(`/`, async (req, res) => {
@@ -22,10 +22,10 @@ router.get(`/`, async (req, res) => {
         // check the id is valid or not
 
         value.forEach(item => {
-           // console.log(item)
-              if (!mongoose.isValidObjectId(item)) {
+            // console.log(item)
+            if (!mongoose.isValidObjectId(item)) {
                 // count the invalid id
-               count = 1
+                count = 1
                 // assign in fault index
                 bug = value.indexOf(item)
 
@@ -33,13 +33,13 @@ router.get(`/`, async (req, res) => {
         });
         // check they are present or not this is custom handle by default catch will handle the error
         // I just play my own things default catch take around 6ms for per search custom take 2.2 - 2.8ms
-           if(count) {
-             return res.status(500).json({
-                   success: false,
-                 // show the fault index
-                   message: `${value[bug]} invalid  product id`
-               })
-           }
+        if(count) {
+            return res.status(500).json({
+                success: false,
+                // show the fault index
+                message: `${value[bug]} invalid  product id`
+            })
+        }
     }
 
     // return all data from db where select specific field -_id means remove that
@@ -251,6 +251,3 @@ router.get(`/get/featured/:count`, async (req, res) => {
 
 
 module.exports = router;
-
-
-

@@ -1,8 +1,7 @@
-import express from 'express'
-import Category from "../models/category"
-import mongoose from 'mongoose'
-
-const router = express.Router()
+const {Category} = require('../models/category');
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
 
 // make a simple get request
 router.get(`/`, async (req, res) => {

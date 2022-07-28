@@ -1,18 +1,30 @@
-import {expressjwt} from "express-jwt";
+const {expressjwt: jwt} = require('express-jwt');
 
-
-// create function that prevent un auth login to access the api
 function authJwt() {
     const secret = process.env.SECRET_KEY;
     const api = process.env.API_URL;
-    return expressjwt({
+    return jwt({
         secret,
-        algorithms: ['HS256']
-
+        algorithms: ['HS256'],
+        isRevoked: isRevoked
     }).unless({
         path: [
-            'api/v1/users/login'
+            {url: /\/api\/v1\/products(.*)/ , methods: ['GET', 'OPTIONS'] },
+            {url: /\/api\/v1\/categories(.*)/ , methods: ['GET', 'OPTIONS'] },
+            `${api}/users/login`,
+            `${api}/users/register`,
         ]
     })
 }
+
+async function isRevoked(req, payload, done) {
+    if(!payload.isAdmin) {
+        done(null, true)
+    }
+
+    done();
+}
+
+
+
 module.exports = authJwt
