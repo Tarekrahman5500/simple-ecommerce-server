@@ -3,22 +3,21 @@ import Order from '../models/order'
 import OrderItem from '../models/OrderItem'
 import mongoose from "mongoose";
 
+
 const router = express.Router();
 
 // make a simple get request
 router.get(`/`, async (req, res) => {
     // return all data from db get username sort according to date in descending
     const orders = await Order.find().populate('user', 'name').sort({'dateOrdered': -1}).populate({
-        path: 'orderItems',
-        populate: {
+        path: 'orderItems', populate: {
             path: 'product', populate: 'category'
         }
     })
     // if the list is empty
     if (!orders) {
         res.status(500).json({success: false})
-    } else
-        res.send(orders)
+    } else res.send(orders)
 })
 
 // get a single order list
@@ -28,22 +27,19 @@ router.get(`/:id`, async (req, res) => {
     const id = req.params.id
     // return for invalid id
     if (!mongoose.isValidObjectId(id)) return res.status(500).json({
-        success: false,
-        message: `${id} invalid  product id`
+        success: false, message: `${id} invalid  product id`
     })
     try {
         // return all data from db get username
         const orders = await Order.findById(id).populate('user', 'name').populate({
-            path: 'orderItems',
-            populate: {
+            path: 'orderItems', populate: {
                 path: 'product', populate: 'category'
             }
         })
         // if the list is empty
         if (!orders) {
             res.status(500).json({success: false})
-        } else
-            res.send(orders)
+        } else res.send(orders)
     } catch (err) {
         res.status(500).json({error: err, message: 'order  cannot be found'})
     }
@@ -77,8 +73,7 @@ router.post(`/`, async (req, res) => {
     const orderItemsIds = Promise.all(req.body.orderItems.map(async orderItem => {
 
         let newOrderItem = new OrderItem({
-            quantity: orderItem.quantity,
-            product: orderItem.product
+            quantity: orderItem.quantity, product: orderItem.product
         })
         // save in db
         try {
@@ -97,14 +92,7 @@ router.post(`/`, async (req, res) => {
 
     //  console.log(orderItemIdsResolves)
     const {
-        shippingAddress1,
-        shippingAddress2,
-        city,
-        zip,
-        country,
-        phone,
-        status,
-        user,
+        shippingAddress1, shippingAddress2, city, zip, country, phone, status, user,
     } = req.body
 
     // calculate total price
@@ -145,8 +133,7 @@ router.put(`/:id`, async (req, res) => {
     const id = req.params.id
     // check the user id is valid or not
     if (!mongoose.isValidObjectId(id)) return res.status(500).json({
-        success: false,
-        message: `${id} invalid  order id`
+        success: false, message: `${id} invalid  order id`
     })
     try {
         //check to delete
@@ -188,6 +175,45 @@ router.delete(`/:id`, async (req, res) => {
     }
 })
 // get total amount of an order
+
+router.get(`/get/totalSales`, async (req, res) => {
+    // total sales get of a product sum in totalSales name and group it by sum given to id without an id object not exist
+    const totalSales = await Order.aggregate([{$group: {_id: null, totalSales: {$sum: '$totalPrice'}}}])
+    // failed to found
+    if (!totalSales) return res.status(404).json({success: false, message: "order sales can not generate"})
+    return res.status(200).json({success: true, totalSales: totalSales.pop().totalSales})
+
+})
+
+// count total order
+
+router.get(`/get/count`, async (req, res) => {
+    try {
+        // return the number of the document
+        const orderCount = await Order.countDocuments()
+        // if the list is empty
+        if (!orderCount) res.status(500).json({success: false})
+
+        return res.status(200).json({Total: orderCount})
+
+    } catch (err) {
+        res.status(400).json({message: err.message})
+    }
+})
+
+// oder list from a user that he want to show
+
+router.get(`/get/userOrders/:userId`, async (req, res) => {
+    // return all data from db get username sort according to date in descending
+    const userOrderList = await Order.find({user: req.params.userId}).populate({
+        path: 'orderItems', populate: {
+            path: 'product', populate: 'category'
+        }
+    }).sort({'dateOrdered': -1})
+    // if the list is empty
+    if (!userOrderList) res.status(500).json({success: false})
+    return res.status(200).send(userOrderList)
+})
 
 
 module.exports = router;

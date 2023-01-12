@@ -10,17 +10,17 @@ function authJwt() {
         algorithms: ['HS256'],
         isRevoked: isRevoked
     }).unless({
-        path: [
-            // a user can check product
-            {url: /\/api\/v1\/products(.*)/, methods: ['GET', 'OPTIONS']},
-            // a user can check categories
-            {url: /\/api\/v1\/categories(.*)/, methods: ['GET', 'OPTIONS']},
-            // a user can order  product
-            {url: /\/api\/v1\/orders(.*)/, methods: ['GET', 'OPTIONS', 'POST']},
-            // request for login
-            `${api}/users/login`,
-            // request for sign up
-            `${api}/users/register`
+         path: [
+             // a user can check product
+             {url: /\/api\/v1\/products(.*)/, methods: ['GET', 'OPTIONS']},
+             // a user can check categories
+             {url: /\/api\/v1\/categories(.*)/, methods: ['GET', 'OPTIONS']},
+             // a user can order  product
+             {url: /\/api\/v1\/orders(.*)/, methods: ['GET', 'OPTIONS', 'POST']},
+             // request for login
+             `${api}/users/login`,
+             // request for sign up
+             `${api}/users/register`
         ]
     })
 }
