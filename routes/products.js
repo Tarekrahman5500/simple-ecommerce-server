@@ -2,36 +2,14 @@ import express from 'express';
 import Product from "../models/product";
 import Category from "../models/category"
 import mongoose from 'mongoose'
-import multer from 'multer'
+import cloudinary from '../helpers/cloud'
+import uploadImage from '../helpers/uploadImage'
 
 const router = express.Router();
 
+//import uploadOptions from '../helpers/multer'
 
-// define image type
-const FILE_TYPE_MAP = {
-    'image/png': 'png',
-    'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg'
-}
-// configure image upload for unique name of each file
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // validate image
-        const isValid = FILE_TYPE_MAP[file.mimetype]
-        let uploadError = new Error('invalid image type')
-        if (isValid) uploadError = null
-        cb(uploadError, 'public/uploads')
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = file.originalname.split(' ').join('-');
-        // get the type of file
-        const extension = FILE_TYPE_MAP[file.mimetype]
-        cb(null, `${uniqueSuffix}-${Date.now()}.${extension}`)
-    }
-})
-
-const uploadOptions = multer({storage: storage})
-
+const fs = require('fs');
 // make a simple get request
 router.get(`/`, async (req, res) => {
 
@@ -112,7 +90,7 @@ router.get(`/:id`, async (req, res) => {
 
 
 // make a post request
-router.post(`/`, uploadOptions.single('image'), async (req, res) => {
+router.post(`/`, uploadImage, async (req, res) => {
     // check id valid or not
     const category_id = req.body.category
     // return for invalid id
@@ -124,8 +102,8 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
     const ct = await Category.findById(category_id)
     if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
     // check file is select or not
-    const file = req.file
-    if (!file) return res.status(500).json({success: false, message: 'No image selected'})
+
+
     //de structure
     const {
         name,
@@ -141,11 +119,13 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
         isFeatured,
     } = req.body
     // get the image file name
-    const fileName = req.file.filename
+    //   const fileName = req.file.filename
     // get base url of server
-    const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
-    console.log(basePath)
+    //  const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
+    //  console.log(basePath)
     // check the category id is valid or not
+
+
     const categoryValidation = await Category.findById(category)
     if (!categoryValidation) return res.status(400).json({
         success: false,
@@ -153,21 +133,34 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
     })
 
     // create new instance of the product model
-    const product = new Product({
-        name,
-        description,
-        richDescription,
-        image: `${basePath}${fileName}`,
-        brands,
-        price,
-        category,
-        countInStock,
-        rating,
-        numReviews,
-        isFeatured
-    })
+
     // save the data
+    let link = ''
     try {
+        const file = req.files.image
+        //console.log(file)
+
+        await cloudinary.uploader.upload(file.tempFilePath, {
+            folder: 'images', width: '150', height: '150', crop: 'fill'
+        }, (err, result) => {
+            if (err) throw err;
+            fs.unlinkSync(file.tempFilePath)
+            link = result.secure_url
+        })
+        const product = new Product({
+            name,
+            description,
+            richDescription,
+            image: link,
+            brands,
+            price,
+            category,
+            countInStock,
+            rating,
+            numReviews,
+            isFeatured
+        })
+
         await product.save()
         res.status(201).json(product)
     } catch (err) {
@@ -177,7 +170,8 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
 
 // update a product
 
-router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
+
+router.put(`/:id`, uploadImage, async (req, res, next) => {
     const id = req.params.id
     const pt = await Product.findById(id)
     if (!mongoose.isValidObjectId(id)) return res.status(500).json({
@@ -193,18 +187,6 @@ router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
     const ct = await Category.findById(category_id)
     if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
     // check file is select or not
-    const file = req.file
-    let imagePath
-    if (file) {
-        const fileName = req.file.filename
-        // get base url of server
-        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
-        imagePath = `${basePath}${fileName}`
-        // remove previous
-        // fsExtra.emptydirSync(pt.image)
-    } else {
-        imagePath = pt.image
-    }
     const {
         name,
         description,
@@ -220,11 +202,26 @@ router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
     } = req.body
 
     try {
+        let link = pt.image
+
+        //console.log(file)
+        if (req.files) {
+            const file = req.files.image
+            await cloudinary.uploader.upload(file.tempFilePath, {
+                folder: 'images', width: '150', height: '150', crop: 'fill'
+            }, (err, result) => {
+                if (err) throw err;
+                fs.unlinkSync(file.tempFilePath)
+                link = result.secure_url
+            })
+        } else link = pt.image
+
+
         let product = await Product.findByIdAndUpdate(id, {
             name,
             description,
             richDescription,
-            image: imagePath,
+            image: link,
             brands,
             price,
             category,
@@ -304,7 +301,7 @@ router.get(`/get/featured/:count`, async (req, res) => {
 })
 
 // upload multiple image
-router.put(`/gallery-images/:id`, uploadOptions.array('images', 10), async (req, res) => {
+router.put(`/gallery-images/:id`, async (req, res) => {
     const id = req.params.id
     const pt = await Product.findById(id)
     if (!mongoose.isValidObjectId(id)) return res.status(500).json({
@@ -313,19 +310,19 @@ router.put(`/gallery-images/:id`, uploadOptions.array('images', 10), async (req,
     })
     if (!pt) return res.status(404).json({success: false, message: 'Product not found'})
     // update images of array
-    const files = req.files
-    let imagePaths = []
-    const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
-    if (files) {
-        // save all images to array
-        files.map(file => {
-            imagePaths.push(`${basePath}${file.filename}`)
-        })
+    // const uploader = async (path) => await cloudinary(path, 'Images');
+    const urls = []
+    const files = req.files;
+    for (const file of files) {
+        const {path} = file;
+        //  const newPath = await uploader(path)
+        // urls.push(newPath)
+        fs.unlinkSync(path)
     }
 
     try {
         const product = await Product.findByIdAndUpdate(id, {
-            images: imagePaths
+            images: urls
         }, {new: true})
 
         if (product) res.status(200).json(product)
@@ -336,7 +333,6 @@ router.put(`/gallery-images/:id`, uploadOptions.array('images', 10), async (req,
     }
 
 })
-
 
 module.exports = router;
 

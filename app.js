@@ -4,12 +4,14 @@ import {ServerApiVersion} from 'mongodb'
 import 'dotenv/config'
 import logger from 'morgan'
 import mongoose from 'mongoose'
+import fileUpload from 'express-fileupload'
 import authJwt from './helpers/jwt'
 import errorHandler from './helpers/errorHandler'
 import productRouter from './routes/products'
 import categoriesRouter from './routes/categories'
 import usersRouter from './routes/users'
 import orderRouter from './routes/orders'
+import path from "path";
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -22,15 +24,15 @@ app.options('*', cors())
 app.use(express.json())
 // for request activity
 app.use(logger('dev'))
+
 app.use(authJwt())
 // file upload
-//app.use(fileUpload({useTempFiles: true}));
-app.use("/public/uploads", express.static(__dirname + "/public/uploads"));
 // handle error in the api
 app.use(errorHandler)
 
 app.use(express.urlencoded({extended: false}));
-
+app.use(fileUpload({useTempFiles: true}));
+app.use(express.static(path.join(__dirname, 'public')));
 //handle mongodb
 (async () => {
     try {
