@@ -2,8 +2,35 @@ import express from 'express';
 import Product from "../models/product";
 import Category from "../models/category"
 import mongoose from 'mongoose'
+import multer from 'multer'
 
 const router = express.Router();
+
+
+// define image type
+const FILE_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg'
+}
+// configure image upload for unique name of each file
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        // validate image
+        const isValid = FILE_TYPE_MAP[file.mimetype]
+        let uploadError = new Error('invalid image type')
+        if (isValid) uploadError = null
+        cb(uploadError, 'public/uploads')
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = file.originalname.split(' ').join('-');
+        // get the type of file
+        const extension = FILE_TYPE_MAP[file.mimetype]
+        cb(null, `${uniqueSuffix}-${Date.now()}.${extension}`)
+    }
+})
+
+const uploadOptions = multer({storage: storage})
 
 // make a simple get request
 router.get(`/`, async (req, res) => {
@@ -22,10 +49,10 @@ router.get(`/`, async (req, res) => {
         // check the id is valid or not
 
         value.forEach(item => {
-           // console.log(item)
-              if (!mongoose.isValidObjectId(item)) {
+            // console.log(item)
+            if (!mongoose.isValidObjectId(item)) {
                 // count the invalid id
-               count = 1
+                count = 1
                 // assign in fault index
                 bug = value.indexOf(item)
 
@@ -33,13 +60,13 @@ router.get(`/`, async (req, res) => {
         });
         // check they are present or not this is custom handle by default catch will handle the error
         // I just play my own things default catch take around 6ms for per search custom take 2.2 - 2.8ms
-           if(count) {
-             return res.status(500).json({
-                   success: false,
-                 // show the fault index
-                   message: `${value[bug]} invalid  product id`
-               })
-           }
+        if (count) {
+            return res.status(500).json({
+                success: false,
+                // show the fault index
+                message: `${value[bug]} invalid  product id`
+            })
+        }
     }
 
     // return all data from db where select specific field -_id means remove that
@@ -63,7 +90,7 @@ router.get(`/:id`, async (req, res) => {
     // check id valid or not
     const id = req.params.id
     // return for invalid id
-    if (!mongoose.isValidObjectId(id))  res.status(500).json({
+    if (!mongoose.isValidObjectId(id)) res.status(500).json({
         success: false,
         message: `${id} invalid  product id`
     })
@@ -85,7 +112,7 @@ router.get(`/:id`, async (req, res) => {
 
 
 // make a post request
-router.post(`/`, async (req, res) => {
+router.post(`/`, uploadOptions.single('image'), async (req, res) => {
     // check id valid or not
     const category_id = req.body.category
     // return for invalid id
@@ -93,6 +120,12 @@ router.post(`/`, async (req, res) => {
         success: false,
         message: `${category_id} invalid  category id`
     })
+    // check category exist in db
+    const ct = await Category.findById(category_id)
+    if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
+    // check file is select or not
+    const file = req.file
+    if (!file) return res.status(500).json({success: false, message: 'No image selected'})
     //de structure
     const {
         name,
@@ -107,6 +140,11 @@ router.post(`/`, async (req, res) => {
         numReviews,
         isFeatured,
     } = req.body
+    // get the image file name
+    const fileName = req.file.filename
+    // get base url of server
+    const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
+    console.log(basePath)
     // check the category id is valid or not
     const categoryValidation = await Category.findById(category)
     if (!categoryValidation) return res.status(400).json({
@@ -119,7 +157,7 @@ router.post(`/`, async (req, res) => {
         name,
         description,
         richDescription,
-        image,
+        image: `${basePath}${fileName}`,
         brands,
         price,
         category,
@@ -139,9 +177,9 @@ router.post(`/`, async (req, res) => {
 
 // update a product
 
-router.put(`/:id`, async (req, res) => {
+router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
     const id = req.params.id
-
+    const pt = await Product.findById(id)
     if (!mongoose.isValidObjectId(id)) return res.status(500).json({
         success: false,
         message: `${id} invalid  product id`
@@ -151,8 +189,22 @@ router.put(`/:id`, async (req, res) => {
         success: false,
         message: `${category_id} invalid  category id`
     })
-
-    //else res.status(400).json({message: `${id} is not a valid Category`})
+    // check category exist in db
+    const ct = await Category.findById(category_id)
+    if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
+    // check file is select or not
+    const file = req.file
+    let imagePath
+    if (file) {
+        const fileName = req.file.filename
+        // get base url of server
+        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
+        imagePath = `${basePath}${fileName}`
+        // remove previous
+        // fsExtra.emptydirSync(pt.image)
+    } else {
+        imagePath = pt.image
+    }
     const {
         name,
         description,
@@ -172,7 +224,7 @@ router.put(`/:id`, async (req, res) => {
             name,
             description,
             richDescription,
-            image,
+            image: imagePath,
             brands,
             price,
             category,
@@ -181,8 +233,10 @@ router.put(`/:id`, async (req, res) => {
             numReviews,
             isFeatured
         }, {new: true})
+
         if (product) {
             res.status(200).json(product)
+
         }
         // id is valid but not in db
         else res.status(404).json({success: false, message: `product with ${id} cannot be found`})
@@ -247,6 +301,40 @@ router.get(`/get/featured/:count`, async (req, res) => {
     } catch (err) {
         res.status(400).json({message: err.message})
     }
+})
+
+// upload multiple image
+router.put(`/gallery-images/:id`, uploadOptions.array('images', 10), async (req, res) => {
+    const id = req.params.id
+    const pt = await Product.findById(id)
+    if (!mongoose.isValidObjectId(id)) return res.status(500).json({
+        success: false,
+        message: `${id} invalid  product id`
+    })
+    if (!pt) return res.status(404).json({success: false, message: 'Product not found'})
+    // update images of array
+    const files = req.files
+    let imagePaths = []
+    const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
+    if (files) {
+        // save all images to array
+        files.map(file => {
+            imagePaths.push(`${basePath}${file.filename}`)
+        })
+    }
+
+    try {
+        const product = await Product.findByIdAndUpdate(id, {
+            images: imagePaths
+        }, {new: true})
+
+        if (product) res.status(200).json(product)
+        // id is valid but not in db
+        else res.status(404).json({success: false, message: `product with ${id} cannot be found`})
+    } catch (err) {
+        res.status(400).json({message: err.message})
+    }
+
 })
 
 

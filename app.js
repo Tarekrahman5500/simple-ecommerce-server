@@ -6,6 +6,10 @@ import logger from 'morgan'
 import mongoose from 'mongoose'
 import authJwt from './helpers/jwt'
 import errorHandler from './helpers/errorHandler'
+import productRouter from './routes/products'
+import categoriesRouter from './routes/categories'
+import usersRouter from './routes/users'
+import orderRouter from './routes/orders'
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -19,14 +23,14 @@ app.use(express.json())
 // for request activity
 app.use(logger('dev'))
 app.use(authJwt())
+// file upload
+//app.use(fileUpload({useTempFiles: true}));
+app.use("/public/uploads", express.static(__dirname + "/public/uploads"));
 // handle error in the api
 app.use(errorHandler)
 
 app.use(express.urlencoded({extended: false}));
-import productRouter from './routes/products'
-import categoriesRouter from './routes/categories'
-import usersRouter from './routes/users'
-import orderRouter from './routes/orders'
+
 //handle mongodb
 (async () => {
     try {
