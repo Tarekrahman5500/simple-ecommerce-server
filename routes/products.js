@@ -4,12 +4,25 @@ import Category from "../models/category"
 import mongoose from 'mongoose'
 import cloudinary from '../helpers/cloud'
 import uploadImage from '../helpers/uploadImage'
+import uploadMultipleImage from '../helpers/uploadMultipleImage'
+
+
+import multer from "multer";
 
 const router = express.Router();
-
-//import uploadOptions from '../helpers/multer'
-
 const fs = require('fs');
+
+// Multer setup
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "./uploads");
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    },
+});
+
+const upload = multer({storage: storage});
 // make a simple get request
 router.get(`/`, async (req, res) => {
 
@@ -91,19 +104,6 @@ router.get(`/:id`, async (req, res) => {
 
 // make a post request
 router.post(`/`, uploadImage, async (req, res) => {
-    // check id valid or not
-    const category_id = req.body.category
-    // return for invalid id
-    if (!mongoose.isValidObjectId(category_id)) return res.status(500).json({
-        success: false,
-        message: `${category_id} invalid  category id`
-    })
-    // check category exist in db
-    const ct = await Category.findById(category_id)
-    if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
-    // check file is select or not
-
-
     //de structure
     const {
         name,
@@ -172,20 +172,7 @@ router.post(`/`, uploadImage, async (req, res) => {
 
 
 router.put(`/:id`, uploadImage, async (req, res, next) => {
-    const id = req.params.id
-    const pt = await Product.findById(id)
-    if (!mongoose.isValidObjectId(id)) return res.status(500).json({
-        success: false,
-        message: `${id} invalid  product id`
-    })
-    const category_id = req.body.category
-    if (!mongoose.isValidObjectId(category_id)) return res.status(500).json({
-        success: false,
-        message: `${category_id} invalid  category id`
-    })
-    // check category exist in db
-    const ct = await Category.findById(category_id)
-    if (!ct) return res.status(500).json({success: false, message: 'Invalid Category'})
+
     // check file is select or not
     const {
         name,
@@ -202,6 +189,7 @@ router.put(`/:id`, uploadImage, async (req, res, next) => {
     } = req.body
 
     try {
+        const pt = await Product.findById(req.params.id)
         let link = pt.image
 
         //console.log(file)
@@ -253,10 +241,14 @@ router.delete(`/:id`, async (req, res) => {
     })
     try {
         //check to delete
+        const pt = await Product.findById(id)
         const data = await Product.findByIdAndRemove(id)
         if (data) {
             // if delete success
+            // Delete image from cloudinary
+            await cloudinary.uploader.destroy(pt.image);
             res.status(200).json({success: true, message: `product with ${id} deleted successfully`})
+
         }
         // id is valid but not in db
         else res.status(404).json({success: false, message: `product with ${id} cannot be found`})
@@ -301,38 +293,51 @@ router.get(`/get/featured/:count`, async (req, res) => {
 })
 
 // upload multiple image
-router.put(`/gallery-images/:id`, async (req, res) => {
-    const id = req.params.id
-    const pt = await Product.findById(id)
-    if (!mongoose.isValidObjectId(id)) return res.status(500).json({
-        success: false,
-        message: `${id} invalid  product id`
-    })
-    if (!pt) return res.status(404).json({success: false, message: 'Product not found'})
-    // update images of array
-    // const uploader = async (path) => await cloudinary(path, 'Images');
-    const urls = []
-    const files = req.files;
-    for (const file of files) {
-        const {path} = file;
-        //  const newPath = await uploader(path)
-        // urls.push(newPath)
-        fs.unlinkSync(path)
+router.put(`/gallery-images/:id`, uploadMultipleImage, async (req, res) => {
+        const id = req.params.id
+        //problem is here in file is null
+        console.log('here')
+        console.log(req.imagesBuffer)
+        try {
+            const links = req.imagesBuffer
+            console.log(links)
+            const product = await Product.findByIdAndUpdate(id, {
+                images: links
+            }, {new: true})
+
+            if (product) return res.status(200).json(product)
+            // id is valid but not in dbs
+            else return res.status(404).json({success: false, message: `product with ${id} cannot be found`})
+
+        } catch
+            (err) {
+            return res.status(400).json({success: false, message: err.message})
+        }
+
     }
+)
 
-    try {
-        const product = await Product.findByIdAndUpdate(id, {
-            images: urls
-        }, {new: true})
-
-        if (product) res.status(200).json(product)
-        // id is valid but not in db
-        else res.status(404).json({success: false, message: `product with ${id} cannot be found`})
-    } catch (err) {
-        res.status(400).json({message: err.message})
+const saveToCloudinary = async (files) => {
+    let imagesBuffer = [];
+    for (let i = 0; i < files.length; i++) {
+        let item = files[i]
+        await cloudinary.uploader.upload(item.tempFilePath, {
+            folder: 'images', width: '150', height: '150', crop: 'fill'
+        }, async (err, result) => {
+            if (err) throw err;
+            fs.unlinkSync(item.tempFilePath)
+            console.log(result.secure_url)
+            imagesBuffer.push(result.secure_url)
+        });
     }
+    await sleep(files.length * 3000);
+    //await Promise.all(saveToCloudinary)
+    return imagesBuffer
+}
 
-})
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 module.exports = router;
 

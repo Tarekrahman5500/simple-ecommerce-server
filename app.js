@@ -30,7 +30,7 @@ app.use(authJwt())
 // handle error in the api
 app.use(errorHandler)
 
-app.use(express.urlencoded({extended: false}));
+app.use(express.urlencoded({extended: true}));
 app.use(fileUpload({useTempFiles: true}));
 app.use(express.static(path.join(__dirname, 'public')));
 //handle mongodb
